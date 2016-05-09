@@ -1,6 +1,9 @@
 package slices
 
-import "reflect"
+import (
+	"math/rand"
+	"reflect"
+)
 
 // StructsIntSlice returns a slice of int64. For more info refer to Slice types StructIntSlice() method.
 func StructsIntSlice(s interface{}, fieldName string) []int64 {
@@ -49,6 +52,28 @@ func (this *Slice) StructIntSlice(fieldName string) []int64 {
 	}
 
 	return intSlice
+}
+
+func (this *Slice) Shuffle() {
+	length := this.value.Len()
+
+	for i := length - 1; i > 0; i-- {
+		pos := rand.Intn(i)
+		iVal := this.value.Index(i)
+		posVal := this.value.Index(pos)
+		tmp := iVal.Interface()
+
+		iVal.Set(posVal)
+		posVal.Set(reflect.ValueOf(tmp))
+	}
+}
+
+func (this *Slice) ShuffleInPlace() {
+
+}
+
+func (this *Slice) Interface() interface{} {
+	return this.value.Interface()
 }
 
 func (this *Slice) isStruct(v reflect.Value) bool {
