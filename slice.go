@@ -1,12 +1,14 @@
 package slices
 
-import (
-	"math/rand"
-	"reflect"
-)
+import "reflect"
 
-// StructsIntSlice returns a slice of int64. For more info refer to Slice types StructIntSlice() method.
-func StructsIntSlice(s interface{}, fieldName string) []int64 {
+// StructInt64Slice returns a slice of int64. For more info refer to Slice types StructInt64Slice() method.
+func StructsInt64Slice(s interface{}, fieldName string) []int64 {
+	return New(s).StructInt64Slice(fieldName)
+}
+
+// StructsIntSlice returns a slice of int. For more info refer to Slice types StructIntSlice() method.
+func StructsIntSlice(s interface{}, fieldName string) []int {
 	return New(s).StructIntSlice(fieldName)
 }
 
@@ -24,25 +26,31 @@ func New(s interface{}) *Slice {
 
 // StructIntSlice extracts the given s slice's every element, which is struct, to []int by the field.
 // It panics if the s's element is not struct, or field is not exits, or the value of field is not signed integer.
-func (this *Slice) StructIntSlice(fieldName string) []int64 {
+func (this *Slice) StructIntSlice(fieldName string) []int {
+	length := this.value.Len()
+	intSlice := make([]int, length)
+
+	for i := 0; i < length; i++ {
+		v := this.strucFieldVal(i, fieldName)
+		switch v.Kind() {
+		case reflect.Int8, reflect.Int16, reflect.Int, reflect.Int32, reflect.Int64:
+			intSlice[i] = int(v.Int())
+		default:
+			panic("polaris1119/slices: the value of field is not signed integer.")
+		}
+	}
+
+	return intSlice
+}
+
+// StructInt64Slice extracts the given s slice's every element, which is struct, to []int64 by the field.
+// It panics if the s's element is not struct, or field is not exits, or the value of field is not signed integer.
+func (this *Slice) StructInt64Slice(fieldName string) []int64 {
 	length := this.value.Len()
 	intSlice := make([]int64, length)
 
 	for i := 0; i < length; i++ {
-		val := this.value.Index(i)
-		if !this.isStruct(val) {
-			panic("polaris1119/slices: the slice's element is not struct or pointer of struct!")
-		}
-
-		if val.Kind() == reflect.Ptr {
-			val = val.Elem()
-		}
-
-		v := val.FieldByName(fieldName)
-		if !v.IsValid() {
-			panic("polaris1119/slices: the struct of slice's element has not the field:" + fieldName)
-		}
-
+		v := this.strucFieldVal(i, fieldName)
 		switch v.Kind() {
 		case reflect.Int8, reflect.Int16, reflect.Int, reflect.Int32, reflect.Int64:
 			intSlice[i] = v.Int()
@@ -54,26 +62,22 @@ func (this *Slice) StructIntSlice(fieldName string) []int64 {
 	return intSlice
 }
 
-func (this *Slice) Shuffle() {
-	length := this.value.Len()
-
-	for i := length - 1; i > 0; i-- {
-		pos := rand.Intn(i)
-		iVal := this.value.Index(i)
-		posVal := this.value.Index(pos)
-		tmp := iVal.Interface()
-
-		iVal.Set(posVal)
-		posVal.Set(reflect.ValueOf(tmp))
+func (this *Slice) strucFieldVal(i int, fieldName string) reflect.Value {
+	val := this.value.Index(i)
+	if !this.isStruct(val) {
+		panic("polaris1119/slices: the slice's element is not struct or pointer of struct!")
 	}
-}
 
-func (this *Slice) ShuffleInPlace() {
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
 
-}
+	v := val.FieldByName(fieldName)
+	if !v.IsValid() {
+		panic("polaris1119/slices: the struct of slice's element has not the field:" + fieldName)
+	}
 
-func (this *Slice) Interface() interface{} {
-	return this.value.Interface()
+	return v
 }
 
 func (this *Slice) isStruct(v reflect.Value) bool {
